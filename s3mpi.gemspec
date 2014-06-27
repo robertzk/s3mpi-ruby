@@ -7,7 +7,7 @@ Gem::Specification.new do |s|
   s.date        = Date.today.to_s
   s.summary     = 'Upload and download files to S3 using a very convenient API.'
   s.description = %(Passing objects between Ruby consoles can be cumbersome if the
-                    user has perform some serialization and deserialization procedure.
+                    user has performed some serialization and deserialization procedure.
                     S3MPI aims to enable simple reading and writing to S3 buckets
                     without the typical overhead of the AWS gem.
   ).strip.gsub(/\s+/, " ")
