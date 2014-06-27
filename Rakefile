@@ -1,9 +1,17 @@
-require 'rake/testtask'
+require 'rspec/core/rake_task'
 
-Rake::TestTask.new do |t|
-  t.libs << 'test'
+RSpec::Core::RakeTask.new(:spec) do |spec|
+    spec.pattern = FileList['spec/**/*_spec.rb']
 end
 
-desc "Run tests"
-task :default => :test
+task default: [:spec]
+
+desc 'Load gem inside irb console'
+task :console do
+  require 'irb'
+  require 'irb/completion'
+  require File.join(__FILE__, '../lib/github_api')
+  ARGV.clear
+  IRB.start
+end
 

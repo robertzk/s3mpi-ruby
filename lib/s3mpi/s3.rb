@@ -1,7 +1,7 @@
 require 'aws-sdk'
 
 module S3MPI
-  class S3
+  module S3
 
     def parse_bucket(bucket) 
       AWS::S3.new.buckets[bucket]
