@@ -61,6 +61,16 @@ module S3MPI
       s3_object(key).exists?
     end
 
+    # Fetch the S3 object as an AWS::S3::S3Object.
+    # 
+    # @param [String] name
+    #    The key under which to save the object in the S3 bucket.
+    #    
+    # @return [AWS::S3::S3Object]
+    def object(key)
+      AWS::S3::S3Object.new(@bucket, "#{@path}#{key}")
+    end
+
   end
 end
 
