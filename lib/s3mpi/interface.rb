@@ -22,8 +22,8 @@ module S3MPI
     # @return [S3MPI::Interface]
     #
     # @api public
-    def initialize bucket, path = ''
-      @bucket = parse_bucket bucket
+    def initialize _bucket, path = ''
+      @bucket = _bucket
       @path   = path 
     end
 
@@ -68,7 +68,11 @@ module S3MPI
     #    
     # @return [AWS::S3::S3Object]
     def object(key)
-      AWS::S3::S3Object.new(@bucket, "#{@path}#{key}")
+      AWS::S3::S3Object.new(bucket, "#{@path}#{key}")
+    end
+
+    def bucket
+      @_bucket ||= parse_bucket @bucket
     end
 
   end
