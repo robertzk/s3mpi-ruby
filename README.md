@@ -1,7 +1,9 @@
-S3MPI 
+S3 Object Serialization interface.
 =========
 
 Upload and download Ruby objects to S3 using a very convenient API.
+This is incredibly handy for passing objects around between consoles when, e.g.,
+collaborating or debugging.
 
 
 Usage
