@@ -22,7 +22,7 @@ Gem::Specification.new do |s|
   s.files = `git ls-files`.split("\n")
   s.test_files = `git ls-files -- {test,spec,features}/*`.split("\n")
 
-  s.add_dependency 'aws-sdk', '~> 1.3.4'
+  s.add_dependency 'aws-sdk', '~> 1.59.0'
 
   s.add_development_dependency 'rake', '~> 10.1.0'
   s.add_development_dependency 'rspec', '~> 2.14.1'
