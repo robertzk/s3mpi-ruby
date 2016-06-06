@@ -6,3 +6,6 @@ Gemfile.lock
 bin
 docs/_build
 coverage
+
+# RubyMine/IntelliJ project files
+.idea
