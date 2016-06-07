@@ -25,7 +25,7 @@ Gem::Specification.new do |s|
   s.add_dependency 'aws-sdk-v1'
 
   s.add_development_dependency 'rake', '~> 10.1.0'
-  s.add_development_dependency 'rspec', '~> 2.14.1'
+  s.add_development_dependency 'rspec', '~> 3.4'
 
   s.extra_rdoc_files = ['README.md', 'LICENSE']
 end
