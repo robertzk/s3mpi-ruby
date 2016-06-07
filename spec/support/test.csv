@@ -1,4 +1,4 @@
-user_id,email
-1,user1@test.com
-2,user2@test.com
-3,user3@test.com
+integer,string,float
+1,user1@test.com,1.11
+2,user2@test.com,2.22
+3,user3@test.com,3.33

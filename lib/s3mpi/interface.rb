@@ -1,7 +1,7 @@
 require 'json'
 require 's3mpi/format'
 require 's3mpi/s3'
-require 'csv'
+require 's3mpi/converters'
 
 module S3MPI
   class Interface
@@ -46,20 +46,20 @@ module S3MPI
     # Load a CSV file, and store the contents in S3
     # Proxies to store
     #
-    # @param [String] csv_file_path path to the CSV file.
-    #    Passed to CSV.read
+    # @param [String] csv_file_path
+    #     Path to the CSV file.
     #
     # @param [Hash] options Options hash.
-    #    Passed to CSV.read
+    #    Passed to CSV.parse
     def store_csv(csv_file_path, options = Hash.new)
-      store _load_csv(csv_file_path, options)
+      store(Converters::CSV.file_to_obj(csv_file_path, options))
     end
 
     # Store a raw object
     # @param [Object] obj
     #    The object to store.
     # @param [String] key
-    #    The key under which to save the object in the S3 bucket.
+    #    The key under which the object is saved in the S3 bucket.
     def store_raw(obj, key)
       s3_object(key).write(obj)
     end
@@ -70,6 +70,16 @@ module S3MPI
     #    The key under which to save the object in the S3 bucket.
     def read key = nil
       parse_json_allowing_quirks_mode s3_object(key).read
+    rescue AWS::S3::Errors::NoSuchKey
+      nil
+    end
+
+    # Read a CSV file from an S3 bucket. Return as array of hashes.
+    #
+    # @param [String] key
+    #    The key under which the file is saved in the S3 bucket.
+    def read_csv(key=nil)
+      Converters::CSV.string_to_obj(s3_object(key).read)
     rescue AWS::S3::Errors::NoSuchKey
       nil
     end
@@ -96,16 +106,6 @@ module S3MPI
 
     def bucket
       @_bucket ||= parse_bucket @bucket
-    end
-
-    private
-    def _load_csv(csv_file_path, options)
-      options = options.merge({
-                                headers: true,
-                                converters: :all
-
-                              })
-      CSV.read(csv_file_path, options).map(&:to_hash)
     end
   end
 end
