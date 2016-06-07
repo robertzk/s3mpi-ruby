@@ -8,5 +8,4 @@ docs/_build
 coverage
 .bundle
 
-# RubyMine/IntelliJ project files
 .idea
