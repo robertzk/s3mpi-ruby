@@ -18,7 +18,7 @@ module S3MPI
     subject { described_class.new(bucket: bucket, path: path ) }
 
     describe '.store_csv' do
-      it 'sends the CSV as a row of hashews to .store' do
+      it 'sends the CSV as a row of hashes to .store' do
         expect(subject).to receive(:store).with(csv_as_array_of_hashes)
 
         subject.store_csv csv_file_path
