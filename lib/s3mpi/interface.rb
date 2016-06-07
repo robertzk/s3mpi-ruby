@@ -56,8 +56,10 @@ module S3MPI
     end
 
     # Store a raw object
-    # @param obj [Object]
-    # @param key [String]
+    # @param [Object] obj
+    #    The object to store.
+    # @param [String] key
+    #    The key under which to save the object in the S3 bucket.
     def store_raw(obj, key)
       s3_object(key).write(obj)
     end
