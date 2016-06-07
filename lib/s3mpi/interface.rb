@@ -1,6 +1,7 @@
 require 'json'
 require 's3mpi/format'
 require 's3mpi/s3'
+require 'csv'
 
 module S3MPI
   class Interface
@@ -16,7 +17,7 @@ module S3MPI
     #
     # @return [String]
     attr_reader :path
-    
+
     # Create a new S3MPI object that responds to #read and #store.
     #
     # @return [S3MPI::Interface]
@@ -24,7 +25,7 @@ module S3MPI
     # @api public
     def initialize _bucket, path = ''
       @bucket = _bucket
-      @path   = path 
+      @path   = path
     end
 
     # Store a Ruby object in an S3 bucket.
@@ -37,8 +38,28 @@ module S3MPI
     #    The number of times to attempt to store the object.
     def store(obj, key = SecureRandom.uuid, try = 1)
       s3_object(key).write(obj.to_json)
-    rescue 
+    rescue # This should really rescue specific errors
       (try -= 1) > 0 ? retry : raise
+    end
+
+
+    # Load a CSV file, and store the contents in S3
+    # Proxies to store
+    #
+    # @param [String] csv_file_path path to the CSV file.
+    #    Passed to CSV.read
+    #
+    # @param [Hash] options Options hash.
+    #    Passed to CSV.read
+    def store_csv(csv_file_path, options = Hash.new)
+      store _load_csv(csv_file_path, options)
+    end
+
+    # Store a raw object
+    # @param obj [Object]
+    # @param key [String]
+    def store_raw(obj, key)
+      s3_object(key).write(obj)
     end
 
     # Read a JSON-serialized Ruby object from an S3 bucket.
@@ -75,6 +96,15 @@ module S3MPI
       @_bucket ||= parse_bucket @bucket
     end
 
+    private
+    def _load_csv(csv_file_path, options)
+      options = options.merge({
+                                headers: true,
+                                converters: :all
+
+                              })
+      CSV.read(csv_file_path, options).map(&:to_hash)
+    end
   end
 end
 
