@@ -1,4 +1,7 @@
 require 'spec_helper'
+require 's3mpi/interface'
+require 's3mpi/converters/csv'
+require_relative '../s3mpi/converters/parsed_csv_shared_examples'
 
 module S3MPI
 
@@ -6,16 +9,18 @@ module S3MPI
 
     let(:bucket) { 'some_bucket' }
     let(:path) { 'some_folder' }
-    let(:csv_file_path) {'spec/support/test.csv'}
+    let(:csv_file_path) { 'spec/support/test.csv' }
+    let(:csv_data_string) { File.read csv_file_path }
     let(:csv_as_array_of_hashes) {
       [
-        {'user_id' => 1, 'email' => 'user1@test.com'},
-        {'user_id' => 2, 'email' => 'user2@test.com'},
-        {'user_id' => 3, 'email' => 'user3@test.com'},
+        {'integer' => 1, 'string' => 'user1@test.com', 'float' => 1.11},
+        {'integer' => 2, 'string' => 'user2@test.com', 'float' => 2.22},
+        {'integer' => 3, 'string' => 'user3@test.com', 'float' => 3.33},
       ]
     }
 
-    subject { described_class.new(bucket: bucket, path: path ) }
+    let(:interface) { described_class.new(bucket: bucket, path: path) }
+    subject { interface }
 
     describe '.store_csv' do
       it 'sends the CSV as a row of hashes to .store' do
@@ -25,6 +30,12 @@ module S3MPI
       end
     end
 
-  end
+    describe '.read_csv' do
 
+      before { allow(interface).to receive(:s3_object) { double(read: csv_data_string) } }
+      subject { interface.read_csv csv_file_path }
+      it_behaves_like 'a parsed CSV'
+
+    end
+  end
 end
