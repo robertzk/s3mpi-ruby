@@ -14,7 +14,7 @@ module S3MPI
       #    Passed to CSV.parse
       def file_to_obj(csv_file_path, options = Hash.new)
         csv_data = File.read(csv_file_path)
-        string_to_obj(csv_data, options).map(&:to_hash)
+        string_to_obj(csv_data, options)
       end
 
       # Convert CSV string data to an array of hashes
