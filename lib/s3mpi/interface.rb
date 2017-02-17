@@ -23,25 +23,36 @@ module S3MPI
     # @return [S3MPI::Interface]
     #
     # @api public
-    def initialize _bucket, path = ''
-      @bucket = _bucket
-      @path   = path
+    def initialize bucket, path = ''
+      @bucket = parse_bucket(bucket)
+      @path   = path.freeze
     end
 
     # Store a Ruby object in an S3 bucket.
-    # 
+    #
     # @param [Object] obj
     #    Any JSON-serializable Ruby object (usually a hash or array).
     # @param [String] key
     #    The key under which to save the object in the S3 bucket.
-    # @param [Integer] try
+    # @param [Integer] tries
     #    The number of times to attempt to store the object.
-    def store(obj, key = SecureRandom.uuid, try = 1)
-      s3_object(key).write(obj.to_json)
-    rescue # This should really rescue specific errors
-      (try -= 1) > 0 ? retry : raise
+    def store(obj, key = SecureRandom.uuid, tries: 1)
+      store_string(obj.to_json, key, tries: tries)
     end
 
+    # Store a raw string to S3
+    # @param [String] string
+    #    The string to store.
+    # @param [String] key
+    #    The key under which the object is saved in the S3 bucket.
+    # @param [Integer] :tries
+    #    The number of times to attempt to store the object.
+    def store_string(string, key, tries: 1)
+      s3_object(key).write(string)
+    rescue AWS::Errors::ServerError
+      (tries -= 1) > 0 ? retry : raise
+    end
+    alias_method :store_raw, :store_string
 
     # Load a CSV file, and store the contents in S3
     # Proxies to store
@@ -52,26 +63,16 @@ module S3MPI
     # @param [Hash] options Options hash.
     #    Passed to CSV.parse
     def store_csv(csv_file_path, options = Hash.new)
-      store(Converters::CSV.file_to_obj(csv_file_path, options))
-    end
-
-    # Store a raw object
-    # @param [Object] obj
-    #    The object to store.
-    # @param [String] key
-    #    The key under which the object is saved in the S3 bucket.
-    def store_raw(obj, key)
-      s3_object(key).write(obj)
+      csv_string = Converters::CSV.file_to_obj(csv_file_path, options)
+      store_string(csv_string, SecureRandom.uuid)
     end
 
     # Read a JSON-serialized Ruby object from an S3 bucket.
-    # 
+    #
     # @param [String] key
     #    The key under which to save the object in the S3 bucket.
     def read key = nil
-      parse_json_allowing_quirks_mode s3_object(key).read
-    rescue AWS::S3::Errors::NoSuchKey
-      nil
+      parse_json_allowing_quirks_mode(read_string(key))
     end
 
     # Read a CSV file from an S3 bucket. Return as array of hashes.
@@ -79,35 +80,24 @@ module S3MPI
     # @param [String] key
     #    The key under which the file is saved in the S3 bucket.
     def read_csv(key=nil)
-      Converters::CSV.string_to_obj(s3_object(key).read)
+      Converters::CSV.string_to_obj(read_string(key))
+    end
+
+    def read_string(key = nil)
+      s3_object(key).read
     rescue AWS::S3::Errors::NoSuchKey
       nil
     end
+    alias_method :read_raw, :read_string
 
     # Check whether a key exists for this MPI interface.
-    # 
+    #
     # @param [String] key
     #    The key under which to save the object in the S3 bucket.
-    #    
+    #
     # @return [TrueClass,FalseClass]
     def exists?(key)
       s3_object(key).exists?
     end
-
-    # Fetch the S3 object as an AWS::S3::S3Object.
-    # 
-    # @param [String] name
-    #    The key under which to save the object in the S3 bucket.
-    #    
-    # @return [AWS::S3::S3Object]
-    def object(key)
-      AWS::S3::S3Object.new(bucket, "#{@path}#{key}")
-    end
-
-    def bucket
-      @_bucket ||= parse_bucket @bucket
-    end
   end
 end
-
-    
