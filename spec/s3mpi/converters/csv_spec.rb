@@ -12,18 +12,28 @@ describe S3MPI::Converters::CSV do
     ]
   }
 
-  describe '#string_to_obj' do
-    subject { described_class.string_to_obj csv_data_string }
+  describe '#parse' do
+    subject { described_class.parse csv_data_string }
 
-    it_behaves_like 'a parsed CSV'
+    it 'converts CSV data to an array of hashes' do
+      expect(subject).to be_kind_of Array
 
-    it { is_expected.to eql csv_as_array_of_hashes }
-  end
+      subject.each do |row|
+        expect(row).to be_kind_of Hash
+      end
+    end
 
-  describe '#file_to_obj' do
-    subject { described_class.file_to_obj csv_file_path }
+    it 'preserves integers' do
+      subject.each do |row|
+        expect(row['integer']).to eq(row['integer'].to_s.to_i)
+      end
+    end
 
-    it_behaves_like 'a parsed CSV'
+    it 'preserves floats' do
+      subject.each do |row|
+        expect(row['float']).to eq(row['float'].to_s.to_f)
+      end
+    end
 
     it { is_expected.to eql csv_as_array_of_hashes }
   end
