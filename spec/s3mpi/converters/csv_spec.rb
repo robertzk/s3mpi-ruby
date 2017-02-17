@@ -1,5 +1,4 @@
 require 'spec_helper'
-require_relative 'parsed_csv_shared_examples'
 
 module S3MPI
   module Converters
