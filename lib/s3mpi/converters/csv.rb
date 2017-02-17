@@ -16,11 +16,10 @@ module S3MPI
         options = options.merge({
                                   headers:    true,
                                   converters: :all
-
                                 })
         ::CSV.parse(csv_data, options).map(&:to_hash)
       end
-      
+
     end
   end
 end
