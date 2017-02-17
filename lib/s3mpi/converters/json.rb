@@ -5,9 +5,13 @@ module S3MPI
     module JSON
       extend self
 
-      def parse(data, options = Hash.new)
+      def parse(json_string, options = Hash.new)
         opts = { quirks_mode: true }.merge(options)
-        ::JSON.parse(data || 'null', **opts)
+        ::JSON.parse(json_string || 'null', **opts)
+      end
+
+      def generate(object, options = Hash.new)
+        object.to_json(options)
       end
 
     end
