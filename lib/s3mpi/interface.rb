@@ -19,14 +19,21 @@ module S3MPI
     # @return [String]
     attr_reader :path
 
+    # Return the default converter for store & read.
+    #
+    # @return [String]
+    attr_reader :default_converter
+
     # Create a new S3MPI object that responds to #read and #store.
     #
     # @return [S3MPI::Interface]
     #
     # @api public
-    def initialize bucket, path = ''
+    def initialize bucket, path = '', default_converter = :json
       @bucket = parse_bucket(bucket)
       @path   = path.freeze
+      converter(default_converter) # verify it is valid
+      @default_converter = default_converter
     end
 
     # Store a Ruby object in an S3 bucket.
@@ -39,7 +46,7 @@ module S3MPI
     #    Which converter to use e.g. :json, :csv, :string
     # @param [Integer] tries
     #    The number of times to attempt to store the object.
-    def store(obj, key = UUID, as: :json, tries: 1)
+    def store(obj, key = UUID, as: default_converter, tries: 1)
       key = SecureRandom.uuid if key.equal?(UUID)
       s3_object(key).write(converter(as).generate(obj))
     rescue AWS::Errors::ServerError
@@ -56,7 +63,7 @@ module S3MPI
     #    The key under which to save the object in the S3 bucket.
     # @param [Symbol] :as
     #    Which converter to use e.g. :json, :csv, :string
-    def read(key = nil, as: :json)
+    def read(key = nil, as: default_converter)
       converter(as).parse(s3_object(key).read)
     rescue AWS::S3::Errors::NoSuchKey
       nil

@@ -17,6 +17,24 @@ describe S3MPI::Interface do
     it { is_expected.to eql path }
   end
 
+  describe '#default_converter' do
+    subject{ interface.default_converter }
+
+    context 'default' do
+      it { is_expected.to eql :json }
+    end
+
+    context 'set on initialization to :csv' do
+      let(:interface) { described_class.new(bucket, path, :csv) }
+      it { is_expected.to eql :csv }
+    end
+
+    it "initialization fails if it is invalid" do
+      expect{ described_class.new(bucket, path, :foo) }.to raise_error \
+        S3MPI::Converters::UnknownConverterError
+    end
+  end
+
   describe '#converter' do
     def expect_converter(key, klass)
       expect(interface.converter(key)).to eql klass
