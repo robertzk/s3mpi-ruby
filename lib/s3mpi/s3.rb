@@ -3,15 +3,15 @@ require 'aws-sdk-v1'
 module S3MPI
   module S3
 
-    def parse_bucket(bucket)
-      AWS::S3.new.buckets[bucket]
-    end
-
-    def s3_object name
+    def s3_object(name)
       bucket.objects[full_object_key(name)]
     end
 
     private
+
+    def parse_bucket(bucket)
+      AWS::S3.new.buckets[bucket]
+    end
 
     def full_object_key(name)
       [path, name].flatten.reject{ |x| blank?(x) }.join('/')
