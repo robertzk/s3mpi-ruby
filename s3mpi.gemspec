@@ -26,7 +26,7 @@ Gem::Specification.new do |s|
 
   s.add_development_dependency 'rake', '~> 10.1.0'
   s.add_development_dependency 'rspec', '~> 3.4'
+  s.add_development_dependency 'pry', '~> 0.10.4'
 
   s.extra_rdoc_files = ['README.md', 'LICENSE']
 end
-
