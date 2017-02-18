@@ -28,8 +28,25 @@ module S3MPI
       # @param [Hash] options
       #    Passed to CSV.generate
       def generate(array_of_hashes, options = Hash.new)
-        CSV.generate(options) do |csv|
-          array_of_hashes.each{ |h| csv << h }
+        return "" if array_of_hashes.empty?
+        headers = inspect_headers(array_of_hashes)
+        ::CSV.generate(options) do |csv|
+          csv << headers
+          array_of_hashes.each do |hash|
+            csv << hash.values_at(*headers)
+          end
+        end
+      end
+
+      private
+
+      class HeaderError < StandardError; end
+
+      def inspect_headers(data)
+        data.first.keys.tap do |headers|
+          sorted = headers.sort
+          error  = data.any?{ |hash| hash.keys.sort != sorted }
+          raise HeaderError, "the rows have inconsistent headers!" if error
         end
       end
 

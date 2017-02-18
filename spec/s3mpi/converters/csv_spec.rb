@@ -37,4 +37,10 @@ describe S3MPI::Converters::CSV do
 
     it { is_expected.to eql csv_as_array_of_hashes }
   end
+
+  describe '#generate' do
+    subject { described_class.generate csv_as_array_of_hashes }
+
+    it { is_expected.to eql csv_data_string }
+  end
 end

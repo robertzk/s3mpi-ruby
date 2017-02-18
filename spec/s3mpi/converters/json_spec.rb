@@ -27,5 +27,31 @@ describe S3MPI::Converters::JSON do
       expect(described_class.parse('null')).to be_nil
     end
   end
-  
+
+  describe '#generate' do
+    it 'dumps a Hash' do
+      expect(described_class.generate({ "a" => 1, "b" => "test"})
+                           ).to eql('{"a":1,"b":"test"}')
+    end
+
+    it 'dumps an Array' do
+      expect(described_class.generate(["a", 1, "b", 2])
+                           ).to eql('["a",1,"b",2]')
+    end
+
+    it 'dumps an Array of Hashes' do
+      expect(described_class.generate([{ "a" => "one" }, {"b" => "two"}])
+                           ).to eql('[{"a":"one"},{"b":"two"}]')
+    end
+
+    it 'dumps a String' do
+      expect(described_class.generate("hello world")
+                           ).to eql('"hello world"')
+    end
+
+    it 'dumps the nil as the JSON null' do
+      expect(described_class.generate(nil)).to eql 'null'
+    end
+  end
+
 end
