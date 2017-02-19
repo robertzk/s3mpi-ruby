@@ -49,7 +49,7 @@ describe S3MPI::Converters::JSON do
                            ).to eql('"hello world"')
     end
 
-    it 'dumps the nil as the JSON null' do
+    it 'dumps nil as the JSON null' do
       expect(described_class.generate(nil)).to eql 'null'
     end
   end
