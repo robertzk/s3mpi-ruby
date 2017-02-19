@@ -74,18 +74,112 @@ describe S3MPI::Interface do
     end
   end
 
-  describe '#exists?' do
+  context "with a pinned s3_object" do
+    def pin_s3_objects!
+      s3_objects_to_pin.each do |key, s3_obj|
+        allow(interface).to receive(:s3_object).with(key).and_return(s3_obj)
+      end
+    end
 
+    def s3_objects_to_pin(*keys)
+      (@to_pin ||= {}).tap do |h|
+        keys.each { |k| h[k] = interface.s3_object(k) }
+      end
+    end
+
+    let(:name) { 'name' }
+
+    before  { s3_objects_to_pin(name) && AWS.stub! }
+    subject { pin_s3_objects! && s3_objects_to_pin[name] }
+
+    describe '#exists?' do
+      it 'calls .exists? on the s3 object' do
+        expect(subject).to receive(:exists?).and_return(retval = double)
+        expect(interface.exists?(name)).to equal retval
+      end
+    end
+
+    let(:as_json) { '{"a":1,"b":"two","c":[3,3,3]}' }
+    let(:as_hash) { { "a" => 1, "b" => "two", "c" => [3,3,3] } }
+
+    let(:as_csv)  { "x,y,z\n1,2,3\n4,5,6\n7,8,9\n" }
+    let(:as_list) { [{"x" => 1, "y" => 2, "z" => 3},
+                     {"x" => 4, "y" => 5, "z" => 6},
+                     {"x" => 7, "y" => 8, "z" => 9}] }
+
+    let(:random_str) { 10.times.map{ SecureRandom.uuid}.join("\n") }
+
+    describe '#read' do
+      it 'can parse the raw string with the json converter' do
+        expect(subject).to receive(:read).and_return(as_json).twice
+        expect(interface.read(name, as: :json)).to eql(as_hash)
+        expect(interface.read_json(name)).to eql(as_hash)
+      end
+
+      it 'can parse the raw string with the csv converter' do
+        expect(subject).to receive(:read).and_return(as_csv).twice
+        expect(interface.read(name, as: :csv)).to eql(as_list)
+        expect(interface.read_csv(name)).to eql(as_list)
+      end
+
+      it 'can parse the raw string with the identity converter' do
+        expect(subject).to receive(:read).and_return(random_str).twice
+        expect(interface.read(name, as: :identity)).to eql(random_str)
+        expect(interface.read_string(name)).to eql(random_str)
+      end
+
+      it 'defaults to the default_converter' do
+        allow(interface).to receive(:default_converter).and_return(:foo)
+        expect(interface).to receive(:converter
+                        ).with(:foo).and_return(S3MPI::Converters::Identity)
+        interface.read(name)
+      end
+    end
+
+    describe '#store' do
+      it 'can generate json and write it to s3' do
+        expect(subject).to receive(:write).with(as_json).twice
+        interface.store(as_hash, name, as: :json)
+        interface.store_json(as_hash, name)
+      end
+
+      it 'can generate csv and write it to s3' do
+        expect(subject).to receive(:write).with(as_csv).twice
+        interface.store(as_list, name, as: :csv)
+        interface.store_csv(as_list, name)
+      end
+
+      it 'can write the raw string to s3' do
+        expect(subject).to receive(:write).with(random_str).twice
+        interface.store(random_str, name, as: :identity)
+        interface.store_string(random_str, name)
+      end
+
+      it 'uses a UUID if the key is not explicitly passed' do
+        s3_objects_to_pin('some_uuid')
+        expect(subject).not_to receive(:write)
+        expect(SecureRandom).to receive(:uuid).and_return('some_uuid')
+        expect(s3_objects_to_pin['some_uuid']).to receive(:write).with(as_json)
+        interface.store(as_hash)
+      end
+
+      it 'defaults to the default_converter' do
+        expect(subject).to receive(:write).with(random_str)
+        allow(interface).to receive(:default_converter).and_return(:foo)
+        expect(interface).to receive(:converter
+                        ).with(:foo).and_return(S3MPI::Converters::Identity)
+        interface.store(random_str, name)
+      end
+
+      it 'retries on AWS::Errors::ServerError' do
+        error = AWS::S3::Errors::RequestTimeout
+        expect(subject).to receive(:write).and_raise(error).twice
+        expect(subject).to receive(:write).and_return("SUCCESS")
+        generator = S3MPI::Converters::JSON
+        expect(generator).to receive(:generate).with(as_hash).exactly(3).times
+        expect(interface.store(as_hash, name, tries: 3)).to eql "SUCCESS"
+      end
+    end
   end
-
-  describe '#read' do
-
-  end
-
-  describe '#store' do
-
-  end
-
-  #before{ AWS.stub! }
 
 end
