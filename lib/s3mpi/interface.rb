@@ -1,4 +1,3 @@
-require 'json'
 require 's3mpi/s3'
 require 's3mpi/converters'
 
