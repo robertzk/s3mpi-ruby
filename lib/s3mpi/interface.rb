@@ -49,7 +49,7 @@ module S3MPI
     def store(obj, key = UUID, as: default_converter, tries: 1)
       key = SecureRandom.uuid if key.equal?(UUID)
       s3_object(key).write(converter(as).generate(obj))
-    rescue AWS::Errors::ServerError
+    rescue AWS::Errors::Base
       (tries -= 1) > 0 ? retry : raise
     end
 
