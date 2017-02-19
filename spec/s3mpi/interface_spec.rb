@@ -53,7 +53,25 @@ describe S3MPI::Interface do
   end
 
   describe '#s3_object' do
+    subject { interface.s3_object(name) }
 
+    let(:name) { 'foo/bar/baz' }
+
+    it { is_expected.to be_a AWS::S3::S3Object }
+    it { is_expected.to have_attributes(bucket: interface.bucket) }
+    it { is_expected.to have_attributes(key: "#{path}/#{name}") }
+
+    { 'empty' => '', 'whitespace' => '  ', 'nil' => nil }.each do |desc, value|
+      context "#{desc} path" do
+        let(:path) { value }
+        it { is_expected.to have_attributes(key: name) }
+      end
+
+      context "#{desc} name" do
+        let(:name) { value }
+        it { is_expected.to have_attributes(key: path) }
+      end
+    end
   end
 
   describe '#exists?' do
