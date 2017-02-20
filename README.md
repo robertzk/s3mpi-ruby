@@ -1,4 +1,4 @@
-S3 uploads of Ruby objects [![Build Status](https://travis-ci.org/robertzk/s3mpi.svg?branch=master)](https://travis-ci.org/robertzk/s3mpi) [![Code Climate](https://codeclimate.com/github/robertzk/s3mpi.png)](https://codeclimate.com/github/robertzk/s3mpi)
+S3 uploads of Ruby objects [![Build Status](https://travis-ci.org/robertzk/s3mpi-ruby.svg?branch=master)](https://travis-ci.org/robertzk/s3mpi-ruby)
 ===========
 
 Upload and download Ruby objects to S3 using a very convenient API.
@@ -22,5 +22,3 @@ we can store and read Ruby objects:
 MPI.store({ some: "ruby", object: 5 }, "some_object")
 MPI.read('some_object')
 ```
-
-

@@ -1,41 +1,186 @@
 require 'spec_helper'
-require 's3mpi/interface'
-require 's3mpi/converters/csv'
-require_relative '../s3mpi/converters/parsed_csv_shared_examples'
 
-module S3MPI
+describe S3MPI::Interface do
+  let(:bucket) { 'some_bucket' }
+  let(:path)   { 'some_folder' }
 
-  describe Interface do
+  let(:interface) { described_class.new(bucket, path) }
 
-    let(:bucket) { 'some_bucket' }
-    let(:path) { 'some_folder' }
-    let(:csv_file_path) { 'spec/support/test.csv' }
-    let(:csv_data_string) { File.read csv_file_path }
-    let(:csv_as_array_of_hashes) {
-      [
-        {'integer' => 1, 'string' => 'user1@test.com', 'float' => 1.11},
-        {'integer' => 2, 'string' => 'user2@test.com', 'float' => 2.22},
-        {'integer' => 3, 'string' => 'user3@test.com', 'float' => 3.33},
-      ]
-    }
+  describe '#bucket' do
+    subject{ interface.bucket }
+    it { is_expected.to be_a AWS::S3::Bucket }
+    it { is_expected.to have_attributes(name: bucket) }
+  end
 
-    let(:interface) { described_class.new(bucket: bucket, path: path) }
-    subject { interface }
+  describe '#path' do
+    subject{ interface.path }
+    it { is_expected.to eql path }
+  end
 
-    describe '.store_csv' do
-      it 'sends the CSV as a row of hashes to .store' do
-        expect(subject).to receive(:store).with(csv_as_array_of_hashes)
+  describe '#default_converter' do
+    subject{ interface.default_converter }
 
-        subject.store_csv csv_file_path
+    context 'default' do
+      it { is_expected.to eql :json }
+    end
+
+    context 'set on initialization to :csv' do
+      let(:interface) { described_class.new(bucket, path, :csv) }
+      it { is_expected.to eql :csv }
+    end
+
+    it "initialization fails if it is invalid" do
+      expect{ described_class.new(bucket, path, :foo) }.to raise_error \
+        S3MPI::Converters::UnknownConverterError
+    end
+  end
+
+  describe '#converter' do
+    def expect_converter(key, klass)
+      expect(interface.converter(key)).to eql klass
+    end
+
+    it('json'){ expect_converter :json, S3MPI::Converters::JSON }
+    it('csv') { expect_converter :csv,  S3MPI::Converters::CSV  }
+    it('string'){ expect_converter :string, S3MPI::Converters::Identity }
+    it('identity'){ expect_converter :identity, S3MPI::Converters::Identity }
+
+    it "raises for unknown keys" do
+      err = S3MPI::Converters::UnknownConverterError
+      msg = ":foo is not a known converter!"
+      expect{ interface.converter(:foo) }.to raise_error(err, msg)
+    end
+  end
+
+  describe '#s3_object' do
+    subject { interface.s3_object(name) }
+
+    let(:name) { 'foo/bar/baz' }
+
+    it { is_expected.to be_a AWS::S3::S3Object }
+    it { is_expected.to have_attributes(bucket: interface.bucket) }
+    it { is_expected.to have_attributes(key: "#{path}/#{name}") }
+
+    { 'empty' => '', 'whitespace' => '  ', 'nil' => nil }.each do |desc, value|
+      context "#{desc} path" do
+        let(:path) { value }
+        it { is_expected.to have_attributes(key: name) }
+      end
+
+      context "#{desc} name" do
+        let(:name) { value }
+        it { is_expected.to have_attributes(key: path) }
+      end
+    end
+  end
+
+  context "with a pinned s3_object" do
+    def pin_s3_objects!
+      s3_objects_to_pin.each do |key, s3_obj|
+        allow(interface).to receive(:s3_object).with(key).and_return(s3_obj)
       end
     end
 
-    describe '.read_csv' do
+    def s3_objects_to_pin(*keys)
+      (@to_pin ||= {}).tap do |h|
+        keys.each { |k| h[k] = interface.s3_object(k) }
+      end
+    end
 
-      before { allow(interface).to receive(:s3_object) { double(read: csv_data_string) } }
-      subject { interface.read_csv csv_file_path }
-      it_behaves_like 'a parsed CSV'
+    let(:name) { 'name' }
 
+    before  { s3_objects_to_pin(name) && AWS.stub! }
+    subject { pin_s3_objects! && s3_objects_to_pin[name] }
+
+    describe '#exists?' do
+      it 'calls .exists? on the s3 object' do
+        expect(subject).to receive(:exists?).and_return(retval = double)
+        expect(interface.exists?(name)).to equal retval
+      end
+    end
+
+    let(:as_json) { '{"a":1,"b":"two","c":[3,3,3]}' }
+    let(:as_hash) { { "a" => 1, "b" => "two", "c" => [3,3,3] } }
+
+    let(:as_csv)  { "x,y,z\n1,2,3\n4,5,6\n7,8,9\n" }
+    let(:as_list) { [{"x" => 1, "y" => 2, "z" => 3},
+                     {"x" => 4, "y" => 5, "z" => 6},
+                     {"x" => 7, "y" => 8, "z" => 9}] }
+
+    let(:random_str) { 10.times.map{ SecureRandom.uuid}.join("\n") }
+
+    describe '#read' do
+      it 'can parse the raw string with the json converter' do
+        expect(subject).to receive(:read).and_return(as_json).twice
+        expect(interface.read(name, as: :json)).to eql(as_hash)
+        expect(interface.read_json(name)).to eql(as_hash)
+      end
+
+      it 'can parse the raw string with the csv converter' do
+        expect(subject).to receive(:read).and_return(as_csv).twice
+        expect(interface.read(name, as: :csv)).to eql(as_list)
+        expect(interface.read_csv(name)).to eql(as_list)
+      end
+
+      it 'can parse the raw string with the identity converter' do
+        expect(subject).to receive(:read).and_return(random_str).twice
+        expect(interface.read(name, as: :identity)).to eql(random_str)
+        expect(interface.read_string(name)).to eql(random_str)
+      end
+
+      it 'defaults to the default_converter' do
+        allow(interface).to receive(:default_converter).and_return(:foo)
+        expect(subject).to receive(:read).and_return(as_json)
+        expect(interface).to receive(:converter
+                        ).with(:foo).and_return(S3MPI::Converters::Identity)
+        expect(interface.read(name)).to eql as_json
+      end
+    end
+
+    describe '#store' do
+      it 'can generate json and write it to s3' do
+        expect(subject).to receive(:write).with(as_json).twice
+        interface.store(as_hash, name, as: :json)
+        interface.store_json(as_hash, name)
+      end
+
+      it 'can generate csv and write it to s3' do
+        expect(subject).to receive(:write).with(as_csv).twice
+        interface.store(as_list, name, as: :csv)
+        interface.store_csv(as_list, name)
+      end
+
+      it 'can write the raw string to s3' do
+        expect(subject).to receive(:write).with(random_str).twice
+        interface.store(random_str, name, as: :identity)
+        interface.store_string(random_str, name)
+      end
+
+      it 'uses a UUID if the key is not explicitly passed' do
+        s3_objects_to_pin('some_uuid')
+        expect(subject).not_to receive(:write)
+        expect(SecureRandom).to receive(:uuid).and_return('some_uuid')
+        expect(s3_objects_to_pin['some_uuid']).to receive(:write).with(as_json)
+        interface.store(as_hash)
+      end
+
+      it 'defaults to the default_converter' do
+        expect(subject).to receive(:write).with(random_str)
+        allow(interface).to receive(:default_converter).and_return(:foo)
+        expect(interface).to receive(:converter
+                        ).with(:foo).and_return(S3MPI::Converters::Identity)
+        interface.store(random_str, name)
+      end
+
+      it 'retries on AWS::Errors::ServerError' do
+        error = AWS::S3::Errors::RequestTimeout
+        expect(subject).to receive(:write).and_raise(error).twice
+        expect(subject).to receive(:write).and_return("SUCCESS")
+        generator = S3MPI::Converters::JSON
+        expect(generator).to receive(:generate).with(as_hash).exactly(3).times
+        expect(interface.store(as_hash, name, tries: 3)).to eql "SUCCESS"
+      end
     end
   end
+
 end

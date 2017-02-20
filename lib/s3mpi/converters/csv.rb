@@ -5,17 +5,7 @@ module S3MPI
     module CSV
       extend self
 
-      # Read a CSV file and convert it to an array of hashes
-      #
-      # @param [String] csv_file_path
-      #    Path to the CSV file.
-      #
-      # @param [Hash] options
-      #    Passed to CSV.parse
-      def file_to_obj(csv_file_path, options = Hash.new)
-        csv_data = File.read(csv_file_path)
-        string_to_obj(csv_data, options)
-      end
+      class HeaderError < StandardError; end
 
       # Convert CSV string data to an array of hashes
       #
@@ -24,14 +14,46 @@ module S3MPI
       #
       # @param [Hash] options
       #    Passed to CSV.parse
-      def string_to_obj(csv_data, options = Hash.new)
+      #
+      # @return [Array]
+      def parse(csv_data, options = Hash.new)
         options = options.merge({
                                   headers:    true,
                                   converters: :all
-
                                 })
         ::CSV.parse(csv_data, options).map(&:to_hash)
       end
+
+      # Convert an array of hashes to CSV string data
+      #
+      # @param [Array] array_of_hashes
+      #    An Array of Hashes
+      #
+      # @param [Hash] options
+      #    Passed to CSV.generate
+      #
+      # @return [String]
+      def generate(array_of_hashes, options = Hash.new)
+        return "" if array_of_hashes.empty?
+        headers = inspect_headers(array_of_hashes)
+        ::CSV.generate(options) do |csv|
+          csv << headers
+          array_of_hashes.each do |hash|
+            csv << hash.values_at(*headers)
+          end
+        end
+      end
+
+      private
+
+      def inspect_headers(data)
+        data.first.keys.tap do |headers|
+          sorted = headers.sort
+          error  = data.any?{ |hash| hash.keys.sort != sorted }
+          raise HeaderError, "the rows have inconsistent headers!" if error
+        end
+      end
+
     end
   end
 end

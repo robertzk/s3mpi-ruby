@@ -1,25 +1,46 @@
 require 'spec_helper'
-require_relative 'parsed_csv_shared_examples'
 
-module S3MPI
-  module Converters
-    describe CSV do
+describe S3MPI::Converters::CSV do
+  let(:csv_file_path) { 'spec/support/test.csv' }
+  let(:csv_data_string) { File.read csv_file_path }
 
-      let(:csv_file_path) { 'spec/support/test.csv' }
-      let(:csv_data_string) { File.read csv_file_path }
+  let(:csv_as_array_of_hashes) {
+    [
+      {'integer' => 1, 'string' => 'user1@test.com', 'float' => 1.11},
+      {'integer' => 2, 'string' => 'user2@test.com', 'float' => 2.22},
+      {'integer' => 3, 'string' => 'user3@test.com', 'float' => 3.33},
+    ]
+  }
 
-      describe '#convert_to_obj' do
-        subject { described_class.string_to_obj csv_data_string }
+  describe '#parse' do
+    subject { described_class.parse csv_data_string }
 
-        it_behaves_like 'a parsed CSV'
-      end
+    it 'converts CSV data to an array of hashes' do
+      expect(subject).to be_kind_of Array
 
-      describe '#file_to_obj' do
-        subject { described_class.file_to_obj csv_file_path }
-
-        it_behaves_like 'a parsed CSV'
-
+      subject.each do |row|
+        expect(row).to be_kind_of Hash
       end
     end
+
+    it 'preserves integers' do
+      subject.each do |row|
+        expect(row['integer']).to eq(row['integer'].to_s.to_i)
+      end
+    end
+
+    it 'preserves floats' do
+      subject.each do |row|
+        expect(row['float']).to eq(row['float'].to_s.to_f)
+      end
+    end
+
+    it { is_expected.to eql csv_as_array_of_hashes }
+  end
+
+  describe '#generate' do
+    subject { described_class.generate csv_as_array_of_hashes }
+
+    it { is_expected.to eql csv_data_string }
   end
 end
