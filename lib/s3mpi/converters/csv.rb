@@ -5,6 +5,8 @@ module S3MPI
     module CSV
       extend self
 
+      class HeaderError < StandardError; end
+
       # Convert CSV string data to an array of hashes
       #
       # @param [String] csv_data
@@ -12,6 +14,8 @@ module S3MPI
       #
       # @param [Hash] options
       #    Passed to CSV.parse
+      #
+      # @return [Array]
       def parse(csv_data, options = Hash.new)
         options = options.merge({
                                   headers:    true,
@@ -27,6 +31,8 @@ module S3MPI
       #
       # @param [Hash] options
       #    Passed to CSV.generate
+      #
+      # @return [String]
       def generate(array_of_hashes, options = Hash.new)
         return "" if array_of_hashes.empty?
         headers = inspect_headers(array_of_hashes)
@@ -39,8 +45,6 @@ module S3MPI
       end
 
       private
-
-      class HeaderError < StandardError; end
 
       def inspect_headers(data)
         data.first.keys.tap do |headers|
