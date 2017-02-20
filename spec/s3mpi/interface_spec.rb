@@ -130,9 +130,10 @@ describe S3MPI::Interface do
 
       it 'defaults to the default_converter' do
         allow(interface).to receive(:default_converter).and_return(:foo)
+        expect(subject).to receive(:read).and_return(as_json)
         expect(interface).to receive(:converter
                         ).with(:foo).and_return(S3MPI::Converters::Identity)
-        interface.read(name)
+        expect(interface.read(name)).to eql as_json
       end
     end
 
