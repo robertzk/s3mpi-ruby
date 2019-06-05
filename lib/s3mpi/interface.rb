@@ -47,9 +47,14 @@ module S3MPI
     #    The number of times to attempt to store the object.
     def store(obj, key = UUID, as: default_converter, tries: 1)
       key = SecureRandom.uuid if key.equal?(UUID)
-      s3_object(key).write(converter(as).generate(obj))
-    rescue AWS::Errors::Base
-      (tries -= 1) > 0 ? retry : raise
+      s3_object(key).put(body: converter(as).generate(obj))
+    rescue Aws::Errors => e
+      tries -= 1
+      if tries > 0
+        retry
+      else
+        raise(e)
+      end
     end
 
     def store_csv(obj, key = UUID); store(obj, key, as: :csv); end
@@ -63,8 +68,8 @@ module S3MPI
     # @param [Symbol] :as
     #    Which converter to use e.g. :json, :csv, :string
     def read(key = nil, as: default_converter)
-      converter(as).parse(s3_object(key).read)
-    rescue AWS::S3::Errors::NoSuchKey
+      converter(as).parse(s3_object(key).get.body.read)
+    rescue Aws::S3::Errors::NoSuchKey
       nil
     end
 
