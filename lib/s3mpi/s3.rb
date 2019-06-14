@@ -1,16 +1,16 @@
-require 'aws-sdk-v1'
+require 'aws-sdk-s3'
 
 module S3MPI
   module S3
 
     def s3_object(name)
-      bucket.objects[full_object_key(name)]
+      bucket.object(full_object_key(name))
     end
 
     private
 
     def parse_bucket(bucket)
-      AWS::S3.new.buckets[bucket]
+      Aws::S3::Resource.new.bucket(bucket)
     end
 
     def full_object_key(name)
