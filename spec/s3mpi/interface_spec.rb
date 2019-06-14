@@ -109,28 +109,33 @@ describe S3MPI::Interface do
 
     let(:random_str) { 10.times.map{ SecureRandom.uuid}.join("\n") }
 
+    def expect_read(object:, result:, count:)
+      chain = double(body: double(read: result))
+      expect(object).to receive(:get).and_return(chain).exactly(count).times
+    end
+
     describe '#read' do
       it 'can parse the raw string with the json converter' do
-        expect(subject).to receive(:read).and_return(as_json).twice
+        expect_read(object: subject, result: as_json, count: 2)
         expect(interface.read(name, as: :json)).to eql(as_hash)
         expect(interface.read_json(name)).to eql(as_hash)
       end
 
       it 'can parse the raw string with the csv converter' do
-        expect(subject).to receive(:read).and_return(as_csv).twice
+        expect_read(object: subject, result: as_csv, count: 2)
         expect(interface.read(name, as: :csv)).to eql(as_list)
         expect(interface.read_csv(name)).to eql(as_list)
       end
 
       it 'can parse the raw string with the identity converter' do
-        expect(subject).to receive(:read).and_return(random_str).twice
+        expect_read(object: subject, result: random_str, count: 2)
         expect(interface.read(name, as: :identity)).to eql(random_str)
         expect(interface.read_string(name)).to eql(random_str)
       end
 
       it 'defaults to the default_converter' do
         allow(interface).to receive(:default_converter).and_return(:foo)
-        expect(subject).to receive(:read).and_return(as_json)
+        expect_read(object: subject, result: as_json, count: 1)
         expect(interface).to receive(:converter
                         ).with(:foo).and_return(S3MPI::Converters::Identity)
         expect(interface.read(name)).to eql as_json

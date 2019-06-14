@@ -4,7 +4,6 @@ require './lib/s3mpi/version'
 Gem::Specification.new do |s|
   s.name        = 's3mpi'
   s.version     = S3MPI::VERSION::STRING.dup
-  s.date        = Date.today.to_s
   s.summary     = 'Upload and download files to S3 using a very convenient API.'
   s.description = %(Passing objects between Ruby consoles can be cumbersome if the
                     user has performed some serialization and deserialization procedure.
